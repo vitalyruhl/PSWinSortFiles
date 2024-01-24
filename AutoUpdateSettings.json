@@ -1,7 +1,7 @@
 {
    
     "global:debugTransScript":  false,
-    "global:debug":  false,
+    "global:debug":  true,
     "UpdateVersion":  120,
     "AllowUpdate":  1,
     "UpdateFromPath":  "https://raw.githubusercontent.com/vitalyruhl/PSWinSortFiles/master",

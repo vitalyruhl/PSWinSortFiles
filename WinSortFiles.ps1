@@ -41,12 +41,11 @@ ________________________________________________________________________________
     $UpdateVersion = 0
     [bool]$AllowUpdate = $false
     $UpdateFromPath = "https://raw.githubusercontent.com/vitalyruhl/PSWinSortFiles/master"
-    $UpdateFile = @("WinSortFiles.ps1","./module/exifFunctions.ps1","./module/mainform.ps1.ps1","./module/recentlyUsedFunctions.ps1")
+    $UpdateFiles = @("WinSortFiles.ps1","./module/exifFunctions.ps1","./module/mainform.ps1.ps1","./module/recentlyUsedFunctions.ps1")
     $UpdateVersionFile = "VersionSettings.json"
-    $ScriptInPath = Get-ScriptDirectory #path where the script stored
-    $ProjectName = (get-item $ScriptInPath ).Name #only the Name of the Path
-    $SettingsFile = "$ScriptInPath\AutoUpdateSettings.json"
-    $currentDateTime = Get-Date -Format yyyy.MM.dd_HHmm
+    #$ProjectName = (get-item $PSScriptRoot ).Name #only the Name of the Path
+    $SettingsFile = "$PSScriptRoot\AutoUpdateSettings.json"
+    #$currentDateTime = Get-Date -Format yyyy.MM.dd_HHmm
     
 <#______________________________________________________________________________________________________________________#>
 
@@ -78,7 +77,7 @@ $global:Modul = 'Start-Sequenz'
 log "Start" 1
 
 if ($global:debugTransScript) {
-    start-transcript "$ScriptInPath\log\$TransScriptPrefix$(get-date -format yyyy-MM).txt"
+    start-transcript "$PSScriptRoot\log\$TransScriptPrefix$(get-date -format yyyy-MM).txt"
 }
 
 log "importig recentlyUsedFunctions.ps1" 1
@@ -156,13 +155,20 @@ function performSelfUpdate() {
         log "Update from $UpdateVersion to $NewestVersion"
         if ($isUri) {
             log "Get files from Uri"
-            #https://www.thomasmaurer.ch/2021/07/powershell-download-script-or-file-from-github/
-            #Invoke-WebRequest -Uri https://raw.githubusercontent.com/thomasmaurer/demo-cloudshell/master/helloworld.ps1 -OutFile .\helloworld.ps1
-            Invoke-WebRequest -Uri "$UpdateFromPath/$UpdateFile" -OutFile "$ScriptInPath\$UpdateFile"
+            foreach ($UpdateFile in $UpdateFiles) {
+                log "UpdateFile: $UpdateFile"
+                #https://www.thomasmaurer.ch/2021/07/powershell-download-script-or-file-from-github/
+                #Invoke-WebRequest -Uri https://raw.githubusercontent.com/thomasmaurer/demo-cloudshell/master/helloworld.ps1 -OutFile .\helloworld.ps1
+                Invoke-WebRequest -Uri "$UpdateFromPath/$UpdateFile" -OutFile "$PSScriptRoot\$UpdateFile"
+            }
         }
         else {
             log "Copy files from Path"
-            copy-item "`"$UpdateFromPath\$UpdateFile`"" "`"$ScriptInPath\$UpdateFile`"" -force #-WhatIf
+
+            foreach ($UpdateFile in $UpdateFiles) {
+                log "UpdateFile: $UpdateFile"
+                copy-item "`"$UpdateFromPath\$UpdateFile`"" "`"$PSScriptRoot\$UpdateFile`"" -force #-WhatIf
+            }
         }
 
         Log "Set New Version in actual Settings-Json"
