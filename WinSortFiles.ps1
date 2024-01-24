@@ -45,8 +45,8 @@ ________________________________________________________________________________
 
 #**********************************************************************************************************************
 # Debug Settings
-[bool]$global:debug = $true # $true $false
-[int]$global:logLevel = 1 # 0 = Errors and Warnings, 1 = Errors and Warnings and Infos, 2 = Errors, Warnings, Infos And Debugging Infos
+[bool]$global:debug = $false # $true $false
+[int]$global:logLevel = 0 # 0 = Errors and Warnings, 1 = Errors and Warnings and Infos, 2 = Errors, Warnings, Infos And Debugging Infos
 [bool]$global:debugTransScript = $false # $true $false
 $global:DebugPrefix = $Funktion + ' ' + $Version + ' -> ' #Variable für Debug-log vorbelegen
 $global:TransScriptPrefix = "Log_" + $Funktion + '_' + $Version
