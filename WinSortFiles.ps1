@@ -29,6 +29,8 @@ ________________________________________________________________________________
 
 <#______________________________________________________________________________________________________________________
     To-Do / Errors:
+    - #todo: add Monts with leading 0
+    - #todo: add a custom form to confirm on deleteEmptyFolder, confirm all where i can see all the Folder to delete! -> make a hashtable??
 ______________________________________________________________________________________________________________________#>
 
 <#______________________________________________________________________________________________________________________
@@ -97,7 +99,7 @@ function performSelfUpdate() {
     $UpdateVersion = 0
     [bool]$AllowUpdate = $false
     $UpdateFromPath = "https://raw.githubusercontent.com/vitalyruhl/PSWinSortFiles/master"
-    $arrayUpdateFiles = @("WinSortFiles.ps1","module/exifFunctions.ps1","module/mainform.ps1.ps1","module/recentlyUsedFunctions.ps1")
+    $arrayUpdateFiles = @("module/exifFunctions.ps1","module/mainform.ps1.ps1","module/recentlyUsedFunctions.ps1","WinSortFiles.ps1")
     $UpdateVersionFile = "VersionSettings.json"
     $SettingsFile = "$PSScriptRoot\AutoUpdateSettings.json"
     
