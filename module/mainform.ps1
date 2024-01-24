@@ -1,5 +1,5 @@
 # C:\Windows\System32\WindowsPowerShell\v1.0
- 
+#C:\Program Files\PowerShell\7\pwsh.exe 
 <#______________________________________________________________________________________________________________________
 
 	(c) Vitaly Ruhl 2024

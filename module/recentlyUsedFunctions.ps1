@@ -1,6 +1,6 @@
 ﻿
 # C:\Windows\System32\WindowsPowerShell\v1.0
- 
+#C:\Program Files\PowerShell\7\pwsh.exe
 <#______________________________________________________________________________________________________________________
 
 	(c) Vitaly Ruhl 2021-2022
@@ -366,4 +366,39 @@ function ftimer(){
     
     [void]$window.ShowDialog()
 
+}
+
+
+function start-countdown ($sleepintervalsec) {
+    <#
+			Use: start-countdown 60
+		#>
+    $ec = 0
+    foreach ($step in (1..$sleepintervalsec)) {
+        try {
+            if ([console]::KeyAvailable) {
+                $key = [system.console]::readkey($true)
+                if (($key.modifiers -band [consolemodifiers]"control") -and ($key.key -eq "C")) {
+                    Write-Warning "CTRL-C pressed" 
+                    return
+                }
+                else {
+                    Write-Host "Key Pressed [$($key.keychar)]"
+                    pause
+                    return
+                }
+            }
+        }
+        catch {
+            if ($ec -eq 0) {
+                Write-Warning "Start in Powershell ISE - console functions are not avaible"
+                $ec++
+            }
+        }
+        finally {
+            $rest = $sleepintervalsec - $step
+            write-progress -Activity "Please wait" -Status " $rest Sek..." -SecondsRemaining ($rest) -PercentComplete  ($step / $sleepintervalsec * 100)
+            start-sleep -seconds 1
+        }
+    }
 }

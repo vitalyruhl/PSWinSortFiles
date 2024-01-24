@@ -1,18 +1,17 @@
 {
-   
-    "global:debugTransScript":  false,
-    "global:debug":  true,
-    "UpdateVersion":  121,
-    "AllowUpdate":  1,
-    "UpdateFromPath":  "https://raw.githubusercontent.com/vitalyruhl/PSWinSortFiles/master",
-    "arrayUpdateFiles":  [
-        "module/exifFunctions.ps1",
-        "module/mainform.ps1",
-        "module/recentlyUsedFunctions.ps1",
-        "WinSortFiles.ps1"
-    ],
-    "UpdateVersionFile":  "VersionSettings.json",
-    "$global:YearAndMonth" :true,
-    "$global:performMoving" : false,
-    "$global:Filter" : "*.jpg;*.png;*.jpeg" 
+  "global:debugTransScript": false,
+  "global:debug": true,
+  "UpdateVersion": 130,
+  "AllowUpdate": 1,
+  "UpdateFromPath": "https://raw.githubusercontent.com/vitalyruhl/PSWinSortFiles/master",
+  "arrayUpdateFiles": [
+    "module/exifFunctions.ps1",
+    "module/mainform.ps1",
+    "module/recentlyUsedFunctions.ps1",
+    "WinSortFiles.ps1"
+  ],
+  "UpdateVersionFile": "VersionSettings.json",
+  "$global:YearAndMonth": true,
+  "$global:performMoving": false,
+  "$global:Filter": "*.jpg;*.png;*.jpeg"
 }

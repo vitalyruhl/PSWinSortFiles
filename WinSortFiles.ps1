@@ -1,9 +1,13 @@
-#C:\Windows\System32\WindowsPowerShell\v1.0
-#C:\Program Files\PowerShell\7\pwsh.exe
+# C:\Windows\System32\WindowsPowerShell\v1.0
+#C:\Program Files\PowerShell\7\pwsh.exe 
 <#______________________________________________________________________________________________________________________
 
 	(c) Vitaly Ruhl 2024
+    Homepage: Vitaly-Ruhl.de
+    Github:https://github.com/vitalyruhl/
+    License: GNU General Public License v3.0
 ______________________________________________________________________________________________________________________#>
+#>
 
 $Funktion = 'SortImagesDM.ps1'
 
@@ -387,11 +391,11 @@ Write-Warning "When you don't see any red than is all fine ;-)"
 if ($global:debugTransScript) { Stop-Transcript }
 
 if ($global:debug) {
-    #pause
+    pause
 }
-# else {
-#     start-countdown 30
-# }
+else {
+    start-countdown 30
+}
 
 
 
