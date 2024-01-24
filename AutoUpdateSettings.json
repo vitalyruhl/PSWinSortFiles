@@ -1,0 +1,18 @@
+{
+   
+    "global:debugTransScript":  false,
+    "global:debug":  false,
+    "UpdateVersion":  120,
+    "AllowUpdate":  1,
+    "UpdateFromPath":  "https://raw.githubusercontent.com/vitalyruhl/PSWinSortFiles/master",
+    "UpdateFiles":  [
+        "WinSortFiles.ps1",
+        "./module/exifFunctions.ps1",
+        "./module/mainform.ps1.ps1",
+        "./module/recentlyUsedFunctions.ps1"
+    ],
+    "UpdateVersionFile":  "VersionSettings.json",
+    "$global:YearAndMonth" :true,
+    "$global:performMoving" : false,
+    "$global:Filter" : "*.jpg;*.png;*.jpeg" 
+}

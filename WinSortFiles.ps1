@@ -13,6 +13,8 @@ $Funktion = 'SortImagesDM.ps1'
     		-------  	----------      -----------     -----------                                                       #>
 
     $Version = 100 #	03.08.2021		Vitaly Ruhl		create
+    $Version = 120 #	24.01.2024		Vitaly Ruhl		Add select folder and option dialog
+    $Version = 130 #	24.01.2024		Vitaly Ruhl		Add Autoupdate
 
 
 <#______________________________________________________________________________________________________________________
@@ -28,10 +30,24 @@ ________________________________________________________________________________
 <#______________________________________________________________________________________________________________________
     Pre-Settings:#>
     [bool]$global:YearAndMonth = $false # $true $false if false, then only year is used
-    [bool]$global:performMooving = $false # $true $false
+    [bool]$global:performMoving = $false # $true $false
     [string]$global:sourcePath = "" # predefine
-    [string]$global:Filter = "*.jpg" # predefine
-
+    [string]$global:Filter = "*.jpg;*.png;*.jpeg" # predefine
+    
+<#______________________________________________________________________________________________________________________#>
+<#______________________________________________________________________________________________________________________
+    Pre-Settings for autoupdate:#>
+   
+    $UpdateVersion = 0
+    [bool]$AllowUpdate = $false
+    $UpdateFromPath = "https://raw.githubusercontent.com/vitalyruhl/PSWinSortFiles/master"
+    $UpdateFile = @("WinSortFiles.ps1","./module/exifFunctions.ps1","./module/mainform.ps1.ps1","./module/recentlyUsedFunctions.ps1")
+    $UpdateVersionFile = "VersionSettings.json"
+    $ScriptInPath = Get-ScriptDirectory #path where the script stored
+    $ProjectName = (get-item $ScriptInPath ).Name #only the Name of the Path
+    $SettingsFile = "$ScriptInPath\AutoUpdateSettings.json"
+    $currentDateTime = Get-Date -Format yyyy.MM.dd_HHmm
+    
 <#______________________________________________________________________________________________________________________#>
 
 
@@ -65,7 +81,6 @@ if ($global:debugTransScript) {
     start-transcript "$ScriptInPath\log\$TransScriptPrefix$(get-date -format yyyy-MM).txt"
 }
 
-
 log "importig recentlyUsedFunctions.ps1" 1
 . .\module\recentlyUsedFunctions.ps1 #Import misk Functions
 
@@ -80,16 +95,107 @@ if ($global:debug) {
     log "logevel:$global:logLevel"
     log "Project in Path:$PSScriptRoot"
 }
+   
+function performSelfUpdate() {
+    $tempModul = $global:Modul # save Modul-Prefix
+    $global:Modul = 'update'
+    log "Entry performSelfUpdate" 2
+    $isUri = $false
 
+    $global:Modul = 'update:Get-Settings'
+    if (Test-Path($SettingsFile)) {
+        $json = (Get-Content $SettingsFile -Raw) | ConvertFrom-Json
+        #$json = ConvertFrom-Json (Get-Content $SettingsFile -Raw) -AsArray
+        foreach ($var in $json.psobject.properties) {
+            $valueInfo = $json.psobject.properties.Where({ $_.name -eq $var.name })
+            $value = $json.psobject.properties.Where({ $_.name -eq $var.name }).value
+            if ($valueInfo.TypeNameOfValue -eq "System.Boolean") {
+                #16.04.2023 bugfix on bools
+                #convert to bool
+                $value = [bool]$value
+            }
+            if ($valueInfo.TypeNameOfValue -eq "System.Object[]") {
+                #16.04.2023 bugfix on arrays with one element
+                #convert to bool
+                $value = @($value)
+            }
+            Set-Variable -Name $var.name -Value $value
+            $logText = "Set-Variable " + $var.name + "-->[$value]"
+            log $logText 1
+        }
+    }
+    else {
+        log "No Settings-File found"
+    }
 
-log "importig exifFunctions.ps1" 1
-. .\module\exifFunctions.ps1 #Import EXIF-Functions
+    if ($UpdateFromPath -match "http") {
+        #check if $UpdateFromPath contains a Uri
+        $isUri = $true
+    }
+   
+    #check version
+    if ($isUri) {
+        log "Update from Uri" 1
+        try {
+            $VersionJson = (Invoke-WebRequest -Uri "$UpdateFromPath/$UpdateVersionFile" -UseBasicParsing).Content | ConvertFrom-Json
+        }
+        catch {
+            Write-Warning "Error in Update-Check - Check your Internet-Connection"
+            $global:Modul = $tempModul #set saved Modul-Prefix
+            return 
+        }
+           
+    }
+   
+    $NewestVersion = $VersionJson.psobject.properties.Where({ $_.name -eq "CurrentVersion" }).value
+    log "NewestVersion: $NewestVersion, UpdateVersion:  $NewestVersion"
 
+    if ($UpdateVersion -lt $NewestVersion) {
+                  
+        try {
+        log "Update from $UpdateVersion to $NewestVersion"
+        if ($isUri) {
+            log "Get files from Uri"
+            #https://www.thomasmaurer.ch/2021/07/powershell-download-script-or-file-from-github/
+            #Invoke-WebRequest -Uri https://raw.githubusercontent.com/thomasmaurer/demo-cloudshell/master/helloworld.ps1 -OutFile .\helloworld.ps1
+            Invoke-WebRequest -Uri "$UpdateFromPath/$UpdateFile" -OutFile "$ScriptInPath\$UpdateFile"
+        }
+        else {
+            log "Copy files from Path"
+            copy-item "`"$UpdateFromPath\$UpdateFile`"" "`"$ScriptInPath\$UpdateFile`"" -force #-WhatIf
+        }
+
+        Log "Set New Version in actual Settings-Json"
+        $json.UpdateVersion = $NewestVersion
+        $json | ConvertTo-Json -depth 32 | set-content $SettingsFile
+    
+        sectionY "Update"
+        Write-Warning "This script is updated now! Plese restart it again to perform your Backup"
+        pause
+        if ($global:debugTransScript) { Stop-Transcript }
+        $global:Modul = $tempModul #set saved Modul-Prefix
+        exit #exit this script
+        }
+        catch {
+            Write-Warning "Error in Update-Check - Check your Settings or internet-Connection"
+            if ($global:debugTransScript) { Stop-Transcript }
+            $global:Modul = $tempModul #set saved Modul-Prefix
+            return #exit this script
+        }
+    }
+    $global:Modul = $tempModul #set saved Modul-Prefix
+    return
+}
+   
+$global:Modul = 'Self-Update'
+log "try Self-Update" 1
+performSelfUpdate
 
 $global:Modul = 'Get-Settings'
 log "get Source-Path" 1
-$global:sourcePath = Get-FolderDialog ("$PSScriptRoot", "Select Source-Path")
-log "sourcePath:$global:sourcePath" 2
+$global:sourcePath = Get-FolderDialog "$PSScriptRoot" "Select Source-Path"
+#$global:sourcePath = "C:\temp\Sort-test\quelle"
+log "sourcePath:$global:sourcePath" 1
 
 if ($null -eq $global:sourcePath -or $global:sourcePath -eq ""){
     Write-Error "Error in Get-Source-Path: Path is empty - Exit Script"
@@ -107,25 +213,23 @@ elseif ($global:sourcePath -eq "-ERROR-") {
     exit
 }
 
-log "sourcePath:$global:sourcePath"
-
 $global:Modul = 'register actions'
 log "Load Start-Sorting()" 1
-function Start-Sorting($sourcePath, $performMooving,$Filter) {
-    <#
-		Info/Example:
+function Start-Sorting($sourcePath, $performMoving, $Filter, $YearAndMonth = $false) {
+        
+    log "importig exifFunctions.ps1" 1
+    . .\module\exifFunctions.ps1 #Import EXIF-Functions
 
-	#>
     $tempModul = $global:Modul # save Modul-Prefix
     $global:Modul = 'Start-Sorting'
     
     log "Function Entry" 	
 
     log "get Target-Path" 2
-    $targetPath = Get-FolderDialog ("$sourcePath", "Select Target-Path")
+    $targetPath = Get-FolderDialog "$sourcePath" "Select Target-Path"
     log "targetPath:$targetPath"
 
-    if ($sourcePath -eq $targetPath) {
+    if ($sourcePath.ToString() -eq $targetPath.ToString()) {
         Write-Warning "Source-Path and Target-Path can't be the same!"
         Write-Warning "Please select a different Target-Path"
         return $false
@@ -133,22 +237,22 @@ function Start-Sorting($sourcePath, $performMooving,$Filter) {
     
     if (-not (Test-Path $targetPath)) {
         #New-Item -ItemType Directory -Path $targetPath | Out-Null
-        Write-Error "Can't find selected Target-Path:[$targetPath]"
+        Write-Warning "Can't find selected Target-Path:[$targetPath]"
         return $false
     }
-
-    $SelectedFiles = Get-ChildItem -Path $sourcePath -Filter $Filter -Recurse -File
+    #*.jpg;*.png;*.jpeg
+    $Extensions = $Filter -split ';'
+    #$SelectedFiles = Get-ChildItem -Path $sourcePath -Filter $Extensions -Recurse -File
+    $SelectedFiles = Get-ChildItem -Path $sourcePath -Include $Extensions -Recurse -File
     log "Selected Files:" 2
     log $SelectedFiles 2
-
-    pause
 
     foreach ($SelectedFile in $SelectedFiles) {
             
         $takkenDate = Get-ExifDateTaken -filePath $SelectedFile.FullName
         $takkenDate = $takkenDate.Trim()
         $takkenDate = $takkenDate -replace '[^\p{L}\p{N}\p{P}\p{S}\p{Z}]', '' # remove all non-ASCII characters
-
+    
         log "Date-Takken EXIF:[$takkenDate]"
         
         if ($takkenDate -eq "NOEXIF") { #fallback to filedate
@@ -157,54 +261,62 @@ function Start-Sorting($sourcePath, $performMooving,$Filter) {
         }
         
         $parsedDate = $null
-        $parsedDate = Get-Date $takkenDate
-        #[System.DateTime]::TryParseExact($takkenDate, 'dd.MM.yyyy HH:mm', [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$parsedDate)
+        $parsedDate = Get-Date $takkenDate -ErrorAction SilentlyContinue
         if ($null -ne $parsedDate) {
             $takkenDate = $parsedDate
         } else {
             $takkenDate = $SelectedFile.LastWriteTime
-            log "Date-Takken (can't Parse date = LastWriteTime):[$takkenDate]"
+            log "Date-Takken (can't Parse date = use LastWriteTime):[$takkenDate]"
         }
-
-        log "Date-Takken (Date-obj):[$takkenDate]"
-        $picYaer = $takkenDate.Year
-        log "Yaer:[$picYaer]"
-
-        # targetPath for Yaer
-        $targetPicYearPath = Join-Path $targetPath $picYaer
-        if (-not (Test-Path $targetPicYearPath)) {
-            New-Item -ItemType Directory -Path $targetPicYearPath | Out-Null
+    
+        log "Date-Takken (Date-obj):[$takkenDate]" 2
+        $fileYear = $takkenDate.Year
+        $fileMonth = $takkenDate.Month
+    
+        # targetPath for Year
+        $targetFileYearPath = Join-Path $targetPath $fileYear
+        if (-not (Test-Path $targetFileYearPath)) {
+            New-Item -ItemType Directory -Path $targetFileYearPath | Out-Null
         }
-
-        $targetsourcePath = Join-Path $targetPicYearPath $SelectedFile.Name
-
+    
+        # targetPath for Year and Month
+        if ($YearAndMonth) {
+            $targetFileMonthPath = Join-Path $targetFileYearPath "$fileMonth"
+            if (-not (Test-Path $targetFileMonthPath)) {
+                New-Item -ItemType Directory -Path $targetFileMonthPath | Out-Null
+            }
+        }
+    
+        $targetFilePath = Join-Path $targetFileYearPath $SelectedFile.Name
+    
+        if ($YearAndMonth) {
+            $targetFilePath = Join-Path $targetFileMonthPath $SelectedFile.Name
+        }
+    
         $counter = 1
-        while (Test-Path $targetsourcePath) {
+        while (Test-Path $targetFilePath) {
             $newName = "{0}_{1:D3}_{2}" -f $parsedDate.ToString('yyyy-MM-dd_HHmmss'), $counter, $SelectedFile.Extension
-            $targetsourcePath = Join-Path $targetPicYearPath $newName
-            Write-Warning "Rename duplicate file:[$SelectedFile.Name] --> [$targetsourcePath]"
+            $targetFilePath = Join-Path $targetFileYearPath $newName
+    
+            if ($YearAndMonth) {
+                $targetFilePath = Join-Path $targetFileMonthPath $newName
+            }
+    
+            Write-Warning "Rename duplicate file:`r`n   [$SelectedFile.Name]`r`n --> [$targetFilePath]"
             $counter++
         }
-
-        if ($performMooving) {
-            log "Move-Item $SelectedFile.FullName $targetsourcePath"
-            Move-Item $SelectedFile.FullName $targetsourcePath -Force #-WhatIf
+    
+        if ($performMoving) {
+            log "Move-Item $($SelectedFile.FullName) $targetFilePath"
+            Move-Item $SelectedFile.FullName $targetFilePath -Force #-WhatIf
         } else {
-            log "Copy-Item $SelectedFile.FullName $targetsourcePath -Force"
-            Copy-Item $SelectedFile.FullName $targetsourcePath -Force #-WhatIf
+            log "Copy-Item $($SelectedFile.FullName) $targetFilePath -Force"
+            Copy-Item $SelectedFile.FullName $targetFilePath -Force #-WhatIf
         }
-
     }
-
-    # catch { 
-    #     Write-Warning "$global:Modul -  Something went wrong" 
-    #     return $false
-    # }
-    # finally{
-    #     $global:Modul = $tempModul #set saved Modul-Prefix
-    # }	
+    
 	$global:Modul = $tempModul #set saved Modul-Prefix
-    #return $true
+   
 }
 
 log "Load okButtonClick()" 1
@@ -217,11 +329,11 @@ function okButtonClick (){
 
     if ($radioButton1.Checked){
         log "RB1 - Year only" 1
-        [bool]$global:YearAndMonth = $false
+        $global:YearAndMonth = $false
     } 
     elseif ($radioButton2.Checked) {
         log "RB2 - Year and Month" 1
-        [bool]$global:YearAndMonth = $true
+        $global:YearAndMonth = $true
     }  
 
     elseif ($radioButton3.Checked) {
@@ -240,12 +352,12 @@ function okButtonClick (){
     #checkboxes
     If ($objTypeCheckbox.Checked = $true)
     {
-        $global:performMooving = $true
-        log "performMooving:$global:performMooving"
+        $global:performMoving = $true
+        log "performMoving:$global:performMoving"
     }
     else {
-        $global:performMooving = $false
-        log "performMooving:$global:performMooving"
+        $global:performMoving = $false
+        log "performMoving:$global:performMoving"
     }
     
     if ($textBox.Text -ne "") {
@@ -260,19 +372,13 @@ function okButtonClick (){
     
     $form.Dispose()
 
-    log "call Start-Sorting($global:sourcePath, $global:performMooving, $global:Filter)" 1
-    Start-Sorting($global:sourcePath, $global:performMooving, $global:Filter)
-    
+    log "call Start-Sorting $global:sourcePath $global:performMoving $global:Filter $global:YearAndMonth" 1
+    Start-Sorting $global:sourcePath $global:performMoving $global:Filter $global:YearAndMonth
+   
 }
-
-
-
 
 log "importig mainForm.ps1"
 . .\module\mainForm.ps1 #open mainForm
-
-
-
 
 section 'Skript is done!'
 Write-Warning "When you don't see any red than is all fine ;-)"
@@ -286,5 +392,5 @@ if ($global:debug) {
 #     start-countdown 30
 # }
 
-pause
+
 

@@ -192,8 +192,8 @@ function  Get-FolderDialog([string]$InitialDirectory="",$Description = "Select a
 	$global:Modul = 'Get-FolderDialog'
     
     $logLevel = 2
-    log "Passed Init Directory is:$InitialDirectory" $logLevel
-    log "Passed Init Description is:$Description" $logLevel
+    log "Passed Init Directory is:$InitialDirectory" 1
+    log "Passed Init Description is:$Description" 1
 
 	try {
 		#Add-Type -AssemblyName System.Windows.Forms
