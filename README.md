@@ -1,6 +1,6 @@
 <p align="center">
   <br />
-  <a title="Intouch-Language" href="https://github.com/vitalyruhl/FindDuplicateFiles"><img src="https://raw.githubusercontent.com/vitalyruhl/PSWinSortFiles/master/images/logo.jpg" alt="Vivil - Vitaly Ruhl Logo" width="30%" /></a>
+  <a title="Intouch-Language" href="https://github.com/vitalyruhl/PSWinSortFiles"><img src="https://raw.githubusercontent.com/vitalyruhl/PSWinSortFiles/master/images/logo.jpg" alt="Vivil - Vitaly Ruhl Logo" width="30%" /></a>
 </p>
 
 # WinSortFiles - Powershell script to Sorting Files

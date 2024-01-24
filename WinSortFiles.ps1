@@ -1,4 +1,5 @@
 #C:\Windows\System32\WindowsPowerShell\v1.0
+#C:\Program Files\PowerShell\7\pwsh.exe
 <#______________________________________________________________________________________________________________________
 
 	(c) Vitaly Ruhl 2024
@@ -25,20 +26,22 @@ ________________________________________________________________________________
 ______________________________________________________________________________________________________________________#>
 
 <#______________________________________________________________________________________________________________________
-    Settings:#>
-    $Targets = "__Sorted"
-    $MovePics = $true # $true $false
+    Pre-Settings:#>
+    [bool]$global:YearAndMonth = $false # $true $false if false, then only year is used
+    [bool]$global:performMooving = $false # $true $false
+    [string]$global:sourcePath = "" # predefine
+    [string]$global:Filter = "*.jpg" # predefine
+
 <#______________________________________________________________________________________________________________________#>
 
 
-
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#region Debugging and User-Interface Functions
-
+#region Debugging Settings
 
 #**********************************************************************************************************************
 # Debug Settings
-[bool]$global:debug = $false # $true $false
+[bool]$global:debug = $true # $true $false
+[int]$global:logLevel = 1 # 0 = Errors and Warnings, 1 = Errors and Warnings and Infos, 2 = Errors, Warnings, Infos And Debugging Infos
 [bool]$global:debugTransScript = $false # $true $false
 $global:DebugPrefix = $Funktion + ' ' + $Version + ' -> ' #Variable für Debug-log vorbelegen
 $global:TransScriptPrefix = "Log_" + $Funktion + '_' + $Version
@@ -46,155 +49,110 @@ $global:Modul = 'Main' #Variable für Debug-log vorbelegen
 $ErrorActionPreference = "Continue" #(Ignore,SilentlyContinue,Continue,Stop,Inquire) 
 $global:DebugPreference = if ($global:debug) { "Continue" } else { "SilentlyContinue" } #Powershell-Own Debug settings
 #**********************************************************************************************************************
-
-
-function SetDebugState ($b){
-    $global:DebugPreference = if ($b) {"Continue"} else {"SilentlyContinue"} #Powershell-Own Debug settings
-}
-
-
-function whr ()	{ Write-Host "`r`n`r`n" }
-	
-function section ($text) {
-    Write-Host "`r`n-----------------------------------------------------------------------------------------------"
-    Write-Host " $text"
-    Write-Host "`r`n"
-}
-	
-function sectionY ($text) {
-    Write-Host "`r`n-----------------------------------------------------------------------------------------------" -ForegroundColor Yellow
-    Write-Host " $text" -ForegroundColor Yellow
-    Write-Host "`r`n"
-}
-	
-function log ($text) {
-    if ($global:debug) {
+function log ($text, $level=-1) {
+    if ($global:debug -and ($global:logLevel -ge $level)) {
         Write-Host "$global:DebugPrefix $global:Modul -> $text" -ForegroundColor DarkGray	
     }
 }
 
-function debug ($text){
-    if ($global:debug) {
-        Write-debug "$global:DebugPrefix $global:Modul -> $text"# -ForegroundColor DarkGray
-    }	
-}
-
 #endregion
 
-#region EXIF Functions
 
-function Get-ExifData {
-    param (
-        [string]$filePath
-    )
-    $tempModul = $global:Modul # save Modul-Prefix
-    $global:Modul = 'Get-ExifDat'
-
-    log "Function execute" 
-
-    try {
-        $shell = New-Object -ComObject Shell.Application
-        $folder = $shell.Namespace((Get-Item $filePath).DirectoryName)
-        $file = $folder.ParseName((Get-Item $filePath).Name)
-        $exifProperties = @{}
-        for ($i = 0; $i -lt 266; $i++) {
-            $propertyValue = $folder.GetDetailsOf($file, $i)
-            if ($propertyValue) {
-                $exifProperties[$folder.GetDetailsOf($folder.Items, $i)] = $propertyValue
-            }
-        }
-        return $exifProperties
-    }
-    catch { 
-        Write-Warning "$global:Modul -  Something went wrong" 
-        return "NOEXIF"
-    }
-    finally{
-        $global:Modul = $tempModul #set saved Modul-Prefix
-    }	
-	
-    return "NOEXIF"
-    
-}
-
-function Get-ExifDateTaken {
-    param (
-        [string]$filePath
-    )
-    $tempModul = $global:Modul # save Modul-Prefix
-    $global:Modul = 'Get-ExifDat'
-
-    log "Function execute" 
-
-    try {
-        $shell = New-Object -ComObject Shell.Application
-        $folder = $shell.Namespace((Get-Item $filePath).DirectoryName)
-        $file = $folder.ParseName((Get-Item $filePath).Name)
-        $dateTakenProperty = $folder.GetDetailsOf($file, 12)  # get date taken: Index 12
-        
-        if ($dateTakenProperty) {
-            return $dateTakenProperty
-        } else {
-            return "NOEXIF"
-        }
-    }
-    catch { 
-        Write-Warning "$global:Modul -  Something went wrong" 
-        return "NOEXIF"
-    }
-    finally{
-        $global:Modul = $tempModul #set saved Modul-Prefix
-    }	
-
-    return "NOEXIF"
-}
-
-#endregion
+$global:Modul = 'Start-Sequenz'
+log "Start" 1
 
 if ($global:debugTransScript) {
     start-transcript "$ScriptInPath\log\$TransScriptPrefix$(get-date -format yyyy-MM).txt"
 }
 
-$projectPath = $PSScriptRoot
 
-if ($global:debug) {
-    log "entry"
-    log "module imported"
+log "importig recentlyUsedFunctions.ps1" 1
+. .\module\recentlyUsedFunctions.ps1 #Import misk Functions
+
+if ($global:debug) {   
     $global:Modul = 'ENV'
-    sectiony "ENV-Test"
+    log "ENV-Test"
+    $psv = $PSVersionTable.PSVersion.ToString()
+    log "PS-Version:$psv" 
+    
     $PC = $env:computername
     log $PC
-
-    log "Targets:$Targets"
-    log "MovePics:$MovePics"
-
+    log "logevel:$global:logLevel"
+    log "Project in Path:$PSScriptRoot"
 }
 
 
-$picPath = $projectPath
-$targetPath = Join-Path $projectPath $Targets
+log "importig exifFunctions.ps1" 1
+. .\module\exifFunctions.ps1 #Import EXIF-Functions
 
 
-if (-not (Test-Path $targetPath)) {
-    New-Item -ItemType Directory -Path $targetPath | Out-Null
+$global:Modul = 'Get-Settings'
+log "get Source-Path" 1
+$global:sourcePath = Get-FolderDialog ("$PSScriptRoot", "Select Source-Path")
+log "sourcePath:$global:sourcePath" 2
+
+if ($null -eq $global:sourcePath -or $global:sourcePath -eq ""){
+    Write-Error "Error in Get-Source-Path: Path is empty - Exit Script"
+    Pause
+    exit
+}
+elseif ($global:sourcePath -eq "-CANCEL-"){
+    Write-Warning "No Folder selected (dialog are canceled) - Exit Script"
+    Pause
+    exit
+}
+elseif ($global:sourcePath -eq "-ERROR-") {
+    Write-Error "Error in Get-Folder-Dialog - Exit Script"
+    Pause
+    exit
 }
 
-#$pictures = Get-ChildItem -Path $picPath -Filter *.jpg -Recurse -File
-$pictures = Get-ChildItem -Path $picPath -Filter *.* -Recurse -File
-log $pictures
+log "sourcePath:$global:sourcePath"
 
-foreach ($picture in $pictures) {
-    #try {
-        
-        $takkenDate = Get-ExifDateTaken -filePath $picture.FullName
+$global:Modul = 'register actions'
+log "Load Start-Sorting()" 1
+function Start-Sorting($sourcePath, $performMooving,$Filter) {
+    <#
+		Info/Example:
+
+	#>
+    $tempModul = $global:Modul # save Modul-Prefix
+    $global:Modul = 'Start-Sorting'
+    
+    log "Function Entry" 	
+
+    log "get Target-Path" 2
+    $targetPath = Get-FolderDialog ("$sourcePath", "Select Target-Path")
+    log "targetPath:$targetPath"
+
+    if ($sourcePath -eq $targetPath) {
+        Write-Warning "Source-Path and Target-Path can't be the same!"
+        Write-Warning "Please select a different Target-Path"
+        return $false
+    }
+    
+    if (-not (Test-Path $targetPath)) {
+        #New-Item -ItemType Directory -Path $targetPath | Out-Null
+        Write-Error "Can't find selected Target-Path:[$targetPath]"
+        return $false
+    }
+
+    $SelectedFiles = Get-ChildItem -Path $sourcePath -Filter $Filter -Recurse -File
+    log "Selected Files:" 2
+    log $SelectedFiles 2
+
+    pause
+
+    foreach ($SelectedFile in $SelectedFiles) {
+            
+        $takkenDate = Get-ExifDateTaken -filePath $SelectedFile.FullName
         $takkenDate = $takkenDate.Trim()
-        $takkenDate = $takkenDate -replace '[^\p{L}\p{N}\p{P}\p{S}\p{Z}]', '' # Entferne alle nicht sichtbaren Zeichen
-        #$takkenDate = $takkenDate -replace '\s+', ' '
+        $takkenDate = $takkenDate -replace '[^\p{L}\p{N}\p{P}\p{S}\p{Z}]', '' # remove all non-ASCII characters
 
         log "Date-Takken EXIF:[$takkenDate]"
         
         if ($takkenDate -eq "NOEXIF") { #fallback to filedate
-            $takkenDate = $picture.LastWriteTime
+            $takkenDate = $SelectedFile.LastWriteTime
             log "Date-Takken (NO Exif = LastWriteTime):[$takkenDate]"
         }
         
@@ -204,7 +162,7 @@ foreach ($picture in $pictures) {
         if ($null -ne $parsedDate) {
             $takkenDate = $parsedDate
         } else {
-            $takkenDate = $picture.LastWriteTime
+            $takkenDate = $SelectedFile.LastWriteTime
             log "Date-Takken (can't Parse date = LastWriteTime):[$takkenDate]"
         }
 
@@ -218,28 +176,103 @@ foreach ($picture in $pictures) {
             New-Item -ItemType Directory -Path $targetPicYearPath | Out-Null
         }
 
-        $targetPicPath = Join-Path $targetPicYearPath $picture.Name
+        $targetsourcePath = Join-Path $targetPicYearPath $SelectedFile.Name
 
         $counter = 1
-        while (Test-Path $targetPicPath) {
-            $newName = "{0}_{1:D3}_{2}" -f $parsedDate.ToString('yyyy-MM-dd_HHmmss'), $counter, $picture.Extension
-            $targetPicPath = Join-Path $targetPicYearPath $newName
-            Write-Warning "Rename duplicate file:[$picture.Name] --> [$targetPicPath]"
+        while (Test-Path $targetsourcePath) {
+            $newName = "{0}_{1:D3}_{2}" -f $parsedDate.ToString('yyyy-MM-dd_HHmmss'), $counter, $SelectedFile.Extension
+            $targetsourcePath = Join-Path $targetPicYearPath $newName
+            Write-Warning "Rename duplicate file:[$SelectedFile.Name] --> [$targetsourcePath]"
             $counter++
         }
 
-        if ($MovePics) {
-            log "Move-Item $picture.FullName $targetPicPath"
-            Move-Item $picture.FullName $targetPicPath -Force #-WhatIf
+        if ($performMooving) {
+            log "Move-Item $SelectedFile.FullName $targetsourcePath"
+            Move-Item $SelectedFile.FullName $targetsourcePath -Force #-WhatIf
         } else {
-            log "Copy-Item $picture.FullName $targetPicPath -Force"
-            Copy-Item $picture.FullName $targetPicPath -Force #-WhatIf
+            log "Copy-Item $SelectedFile.FullName $targetsourcePath -Force"
+            Copy-Item $SelectedFile.FullName $targetsourcePath -Force #-WhatIf
         }
 
-    # } catch {
-    #     Write-Warning "error: $($picture.FullName): $_"
+    }
+
+    # catch { 
+    #     Write-Warning "$global:Modul -  Something went wrong" 
+    #     return $false
     # }
+    # finally{
+    #     $global:Modul = $tempModul #set saved Modul-Prefix
+    # }	
+	$global:Modul = $tempModul #set saved Modul-Prefix
+    #return $true
 }
+
+log "Load okButtonClick()" 1
+function okButtonClick (){
+    #Radiobuttons...
+    #foreach ($o in @($radioButton1, $radioButton2, $radioButton3)){
+    #    if ($o.Checked){
+    #        $option = $o.Text}
+    #    }
+
+    if ($radioButton1.Checked){
+        log "RB1 - Year only" 1
+        [bool]$global:YearAndMonth = $false
+    } 
+    elseif ($radioButton2.Checked) {
+        log "RB2 - Year and Month" 1
+        [bool]$global:YearAndMonth = $true
+    }  
+
+    elseif ($radioButton3.Checked) {
+        log "RB3" 1
+        log "Delete empty Folders is selected" 1
+        log "sourcePath is [$global:sourcePath]" 1
+        $form.Dispose()
+        DeleteEmptyFolder $global:sourcePath # function is in recentlyUsedFunctions.ps1
+        return $true #exit script
+    }  
+    # elseif ($radioButton4.Checked) {
+       
+    # }  
+    else {Write-Warning "No Option selected"}
+
+    #checkboxes
+    If ($objTypeCheckbox.Checked = $true)
+    {
+        $global:performMooving = $true
+        log "performMooving:$global:performMooving"
+    }
+    else {
+        $global:performMooving = $false
+        log "performMooving:$global:performMooving"
+    }
+    
+    if ($textBox.Text -ne "") {
+        $global:Filter = $textBox.Text
+        log "Filter:$global:Filter"
+    }
+    else {
+        #$global:Filter = "*.jpg"
+        log "Filter are not set, use default:[$global:Filter]"
+        
+    }
+    
+    $form.Dispose()
+
+    log "call Start-Sorting($global:sourcePath, $global:performMooving, $global:Filter)" 1
+    Start-Sorting($global:sourcePath, $global:performMooving, $global:Filter)
+    
+}
+
+
+
+
+log "importig mainForm.ps1"
+. .\module\mainForm.ps1 #open mainForm
+
+
+
 
 section 'Skript is done!'
 Write-Warning "When you don't see any red than is all fine ;-)"
