@@ -2,14 +2,14 @@
    
     "global:debugTransScript":  false,
     "global:debug":  true,
-    "UpdateVersion":  120,
+    "UpdateVersion":  121,
     "AllowUpdate":  1,
     "UpdateFromPath":  "https://raw.githubusercontent.com/vitalyruhl/PSWinSortFiles/master",
-    "UpdateFiles":  [
-        "WinSortFiles.ps1",
-        "./module/exifFunctions.ps1",
-        "./module/mainform.ps1.ps1",
-        "./module/recentlyUsedFunctions.ps1"
+    "arrayUpdateFiles":  [
+        "module/exifFunctions.ps1",
+        "module/mainform.ps1",
+        "module/recentlyUsedFunctions.ps1",
+        "WinSortFiles.ps1"
     ],
     "UpdateVersionFile":  "VersionSettings.json",
     "$global:YearAndMonth" :true,

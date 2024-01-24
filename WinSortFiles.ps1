@@ -35,20 +35,6 @@ ________________________________________________________________________________
     [string]$global:Filter = "*.jpg;*.png;*.jpeg" # predefine
     
 <#______________________________________________________________________________________________________________________#>
-<#______________________________________________________________________________________________________________________
-    Pre-Settings for autoupdate:#>
-   
-    $UpdateVersion = 0
-    [bool]$AllowUpdate = $false
-    $UpdateFromPath = "https://raw.githubusercontent.com/vitalyruhl/PSWinSortFiles/master"
-    $UpdateFiles = @("WinSortFiles.ps1","./module/exifFunctions.ps1","./module/mainform.ps1.ps1","./module/recentlyUsedFunctions.ps1")
-    $UpdateVersionFile = "VersionSettings.json"
-    #$ProjectName = (get-item $PSScriptRoot ).Name #only the Name of the Path
-    $SettingsFile = "$PSScriptRoot\AutoUpdateSettings.json"
-    #$currentDateTime = Get-Date -Format yyyy.MM.dd_HHmm
-    
-<#______________________________________________________________________________________________________________________#>
-
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #region Debugging Settings
@@ -101,6 +87,19 @@ function performSelfUpdate() {
     log "Entry performSelfUpdate" 2
     $isUri = $false
 
+    <#______________________________________________________________________________________________________________________
+    Pre-Settings for autoupdate:#>
+   
+    $UpdateVersion = 0
+    [bool]$AllowUpdate = $false
+    $UpdateFromPath = "https://raw.githubusercontent.com/vitalyruhl/PSWinSortFiles/master"
+    $arrayUpdateFiles = @("WinSortFiles.ps1","module/exifFunctions.ps1","module/mainform.ps1.ps1","module/recentlyUsedFunctions.ps1")
+    $UpdateVersionFile = "VersionSettings.json"
+    $SettingsFile = "$PSScriptRoot\AutoUpdateSettings.json"
+    
+    <#______________________________________________________________________________________________________________________#>
+
+
     $global:Modul = 'update:Get-Settings'
     if (Test-Path($SettingsFile)) {
         $json = (Get-Content $SettingsFile -Raw) | ConvertFrom-Json
@@ -109,13 +108,9 @@ function performSelfUpdate() {
             $valueInfo = $json.psobject.properties.Where({ $_.name -eq $var.name })
             $value = $json.psobject.properties.Where({ $_.name -eq $var.name }).value
             if ($valueInfo.TypeNameOfValue -eq "System.Boolean") {
-                #16.04.2023 bugfix on bools
-                #convert to bool
                 $value = [bool]$value
             }
             if ($valueInfo.TypeNameOfValue -eq "System.Object[]") {
-                #16.04.2023 bugfix on arrays with one element
-                #convert to bool
                 $value = @($value)
             }
             Set-Variable -Name $var.name -Value $value
@@ -155,19 +150,19 @@ function performSelfUpdate() {
         log "Update from $UpdateVersion to $NewestVersion"
         if ($isUri) {
             log "Get files from Uri"
-            foreach ($UpdateFile in $UpdateFiles) {
-                log "UpdateFile: $UpdateFile"
-                #https://www.thomasmaurer.ch/2021/07/powershell-download-script-or-file-from-github/
-                #Invoke-WebRequest -Uri https://raw.githubusercontent.com/thomasmaurer/demo-cloudshell/master/helloworld.ps1 -OutFile .\helloworld.ps1
-                Invoke-WebRequest -Uri "$UpdateFromPath/$UpdateFile" -OutFile "$PSScriptRoot\$UpdateFile"
+            foreach ($updateFile in $arrayUpdateFiles) {
+                log "updateFile: $updateFile"
+                $updateFileWin = $updateFile -replace '/', '\'
+                log "updateFileWin: $updateFileWin"
+                Invoke-WebRequest -Uri "$UpdateFromPath/$updateFile" -OutFile "$PSScriptRoot\$updateFileWin"
             }
         }
         else {
             log "Copy files from Path"
 
-            foreach ($UpdateFile in $UpdateFiles) {
-                log "UpdateFile: $UpdateFile"
-                copy-item "`"$UpdateFromPath\$UpdateFile`"" "`"$PSScriptRoot\$UpdateFile`"" -force #-WhatIf
+            foreach ($updateFile in $arrayUpdateFiles) {
+                log "updateFile: $updateFile"
+                copy-item "`"$UpdateFromPath\$updateFile`"" "`"$PSScriptRoot\$updateFile`"" -force #-WhatIf
             }
         }
 
