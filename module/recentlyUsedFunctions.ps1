@@ -279,7 +279,9 @@ function DeleteEmptyFolder($sourcePath) {
     $global:Modul = "DeleteEmptyFolder()"
     log "`r`n`r`n------------------------------------------------------`r`n" 2
     log "DeleteEmptyFolder are called" 2
-   
+    
+    $emptyFolders = @()
+    
     $SD = $PSScriptRoot
     
     if ($null -eq $sourcePath -or $sourcePath -eq ""){
@@ -304,12 +306,30 @@ function DeleteEmptyFolder($sourcePath) {
         log "`r`n`r`n------------------------------------------------------`r`n" 2
         log 'Get Folder to delete:' 2
 
-        #https://stackoverflow.com/questions/28631419/how-to-recursively-remove-all-empty-folders-in-powershell
-        <########################################################################
-            define a script block that will remove empty folders under a root folder, 
-            using tail-recursion to ensure that it only walks the folder tree once. 
-            -Force is used to be able to process hidden files/folders as well.
-        ########################################################################>
+        function Get-EmptyFolders {
+            param (
+                [string]$Path #,
+                #[array]$emptyFolders
+            )
+
+            $emptyFolders = @()
+
+            foreach ($childDirectory in Get-ChildItem -Force -LiteralPath $Path -Directory) {
+                $emptyFolders += Get-EmptyFolders -Path $childDirectory.FullName
+            }
+
+        $currentChildren = Get-ChildItem -Force -LiteralPath $Path
+        $isEmpty = $null -eq $currentChildren
+        if ($isEmpty) {
+            log "found empty folder at path '$Path'." 2
+            $emptyFolders += $Path
+        }
+
+        return $emptyFolders
+        }
+        
+        
+<#
         $tailRecursion = {
         
             param(
@@ -324,9 +344,10 @@ function DeleteEmptyFolder($sourcePath) {
                 $currentChildren = Get-ChildItem -Force -LiteralPath $Path
                 $isEmpty = $null -eq $currentChildren
                 if ($isEmpty) {
-                    Write-Verbose "Removing empty folder at path '${Path}'." -Verbose
-                    #todo add a custom form to confirm , confirm all where i can see all the Folder to delete! -> make a hashtable hier and delete later...
-                    Remove-Item -Force -LiteralPath $Path -Confirm:$true #-WhatIf
+                    # Write-Verbose "Removing empty folder at path '${Path}'." -Verbose
+                    # Remove-Item -Force -LiteralPath $Path -Confirm:$true #-WhatIf
+                    log "found empty folder at path '${Path}'." 2
+                    $script:emptyFolders += $Path
                 }
         
             }
@@ -336,6 +357,30 @@ function DeleteEmptyFolder($sourcePath) {
         }
 
         & $tailRecursion -Path $SerchPath
+#>
+        #Get-EmptyFolders -Path $SerchPath -emptyFolders $emptyFolders
+        $emptyFolders = Get-EmptyFolders -Path $SerchPath
+
+        log "emptyFolders: '$emptyFolders'" 2
+        log "emptyFolders.Count: '$($emptyFolders.Count)'" 2
+
+        if ($emptyFolders.Count -gt 0) {
+            log "load module/confirmationForm.ps1" 1
+            . .\module/confirmationForm.ps1
+            $confirmationResult = Show-EmptyFolderConfirmationForm -Folders $emptyFolders
+
+            if ($confirmationResult -eq "Yes") {
+                foreach ($folder in $emptyFolders) {
+                    Write-Verbose "Removing empty folder at path '$folder'." -Verbose
+                    Remove-Item -Force -LiteralPath $folder
+                }
+            } else {
+                Write-Host "Deletion canceled by user."
+            }
+        } else {
+            Write-Host "No empty folders found in the selected path."
+        }
+
     }
 }
 

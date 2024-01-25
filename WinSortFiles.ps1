@@ -19,7 +19,8 @@ $Funktion = 'SortImagesDM.ps1'
     $Version = 100 #	03.08.2021		Vitaly Ruhl		create
     $Version = 120 #	24.01.2024		Vitaly Ruhl		Add select folder and option dialog
     $Version = 130 #	24.01.2024		Vitaly Ruhl		Add Autoupdate
-    $Version = 131 #	24.01.2024		Vitaly Ruhl		Add Leading 0 to Month
+    $Version = 131 #	25.01.2024		Vitaly Ruhl		Add Leading 0 to Month
+    $Version = 140 #	25.01.2024		Vitaly Ruhl		add a custom form to confirm on deleteEmptyFolder
 
 
 <#______________________________________________________________________________________________________________________
@@ -30,7 +31,6 @@ ________________________________________________________________________________
 
 <#______________________________________________________________________________________________________________________
     To-Do / Errors:
-    - #todo: add a custom form to confirm on deleteEmptyFolder, confirm all where i can see all the Folder to delete! -> make a hashtable??
 ______________________________________________________________________________________________________________________#>
 
 <#______________________________________________________________________________________________________________________
