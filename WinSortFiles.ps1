@@ -19,17 +19,17 @@ $Funktion = 'SortImagesDM.ps1'
     $Version = 100 #	03.08.2021		Vitaly Ruhl		create
     $Version = 120 #	24.01.2024		Vitaly Ruhl		Add select folder and option dialog
     $Version = 130 #	24.01.2024		Vitaly Ruhl		Add Autoupdate
+    $Version = 131 #	24.01.2024		Vitaly Ruhl		Add Leading 0 to Month
 
 
 <#______________________________________________________________________________________________________________________
     Function:
-    Get-ExifData and sort images by year/Month taken
+    Sort Files in Year and or Month in a new directory. On Images: Get-ExifData and sort images by date taken
 ______________________________________________________________________________________________________________________#>
 
 
 <#______________________________________________________________________________________________________________________
     To-Do / Errors:
-    - #todo: add Monts with leading 0
     - #todo: add a custom form to confirm on deleteEmptyFolder, confirm all where i can see all the Folder to delete! -> make a hashtable??
 ______________________________________________________________________________________________________________________#>
 
@@ -278,7 +278,7 @@ function Start-Sorting($sourcePath, $performMoving, $Filter, $YearAndMonth = $fa
     
         log "Date-Takken (Date-obj):[$takkenDate]" 2
         $fileYear = $takkenDate.Year
-        $fileMonth = $takkenDate.Month
+        $fileMonth = $takkenDate.Month.ToString("D2")
     
         # targetPath for Year
         $targetFileYearPath = Join-Path $targetPath $fileYear
